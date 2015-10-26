@@ -1,6 +1,7 @@
 // Map each class of actor to a character
 var actorChars = {
   "@": Player,
+  "w": Ender,
   "o": Coin, // A coin will wobble up and down
   "=": Lava, "|": Lava, "v": Lava  
 };
@@ -38,6 +39,12 @@ function Level(plan) {
       // Because there is a third case (space ' '), use an "else if" instead of "else"
       else if (ch == "!")
         fieldType = "lava";
+      else if (ch == "s")
+        fieldType = "spike";
+      else if (ch == "u")
+        fieldType = "downSpike";
+      else if (ch == "w")
+        fieldType = "ender";
 
       // "Push" the fieldType, which is a string, onto the gridLine array (at the end).
       gridLine.push(fieldType);
@@ -88,6 +95,14 @@ function Coin(pos) {
   this.wobble = Math.random() * Math.PI * 2;
 }
 Coin.prototype.type = "coin";
+
+function Ender(pos) {
+  this.basePos = this.pos = pos.plus(new Vector(0.2, 0.1));
+  this.size = new Vector(0.6, 0.6);
+  // Make it go back and forth in a sine wave.
+  this.wobble = Math.random() * Math.PI * 2;
+}
+Ender.prototype.type = "ender";
 
 // Lava is initialized based on the character, but otherwise has a
 // size and position
@@ -294,17 +309,11 @@ Coin.prototype.act = function(step) {
   this.pos = this.basePos.plus(new Vector(0, wobblePos));
 };
 
-var maxStep = 0.05;
-
-var wobbleSpeed = 8, wobbleDist = 0.07;
-
-Coin.prototype.act = function(step) {
+Ender.prototype.act = function(step) {
   this.wobble += step * wobbleSpeed;
   var wobblePos = Math.sin(this.wobble) * wobbleDist;
   this.pos = this.basePos.plus(new Vector(0, wobblePos));
 };
-
-var maxStep = 0.05;
 
 var playerXSpeed = 7;
 
@@ -363,24 +372,40 @@ Player.prototype.act = function(step, level, keys) {
   }
 };
 
+var coinsCollected = 0;
+var deaths = 0;
+var coinsThisLevel = 0;
+
 Level.prototype.playerTouched = function(type, actor) {
 
   // if the player touches lava and the player hasn't won
   // Player loses
   if (type == "lava" && this.status == null) {
-    this.status = "lost";
-    this.finishDelay = 1;
+      deaths++
+      counterChange('deathCounter', deaths);
+      this.status = "lost";
+      this.finishDelay = 1;
+  } else if (type == "spike" && this.status == null) {
+      deaths++
+      counterChange('deathCounter', deaths);
+      this.status = "lost";
+      this.finishDelay = 1;
+  } else if (type == "downSpike" && this.status == null) {
+      deaths++
+      counterChange('deathCounter', deaths);
+      this.status = "lost";
+      this.finishDelay = 1;
   } else if (type == "coin") {
-    this.actors = this.actors.filter(function(other) {
-      return other != actor;
-    });
-    // If there aren't any coins left, player wins
-    if (!this.actors.some(function(actor) {
-           return actor.type == "coin";
-         })) {
+      coinsCollected++;
+      coinsThisLevel++;
+      counterChange('coinCounter', coinsCollected);
+      this.actors = this.actors.filter(function(other) {
+      return other != actor;});
+  } else if (type == "ender") {
+      this.actors = this.actors.filter(function(other) {
+      return other != actor;});
       this.status = "won";
       this.finishDelay = 1;
-    }
   }
 };
 
@@ -450,19 +475,36 @@ function runLevel(level, Display, andThen) {
     }
   });
 }
+var deathCounter = 0;
 
 function runGame(plans, Display) {
   function startLevel(n) {
     // Create a new level using the nth element of array plans
     // Pass in a reference to Display function, DOMDisplay (in index.html).
     runLevel(new Level(plans[n]), Display, function(status) {
-      if (status == "lost")
+      if (status == "lost"){
+        deathCounter++
+        coinsCollected = coinsCollected - coinsThisLevel;
+        coinsThisLevel = 0;
+        counterChange('coinCounter', coinsCollected)
         startLevel(n);
-      else if (n < plans.length - 1)
+      } else if (n < plans.length - 1){
         startLevel(n + 1);
-      else
+        coinsThisLevel = 0;
+      } else{
         console.log("You win!");
+        document.getElementById('coinCounter').innerHTML += 'out of 130';
+      };
+
     });
   }
   startLevel(0);
+}
+
+function counterChange(counter, variable){
+  document.getElementById(counter).innerHTML = variable;
+}
+
+function restartGame(){
+  location.reload();
 }
