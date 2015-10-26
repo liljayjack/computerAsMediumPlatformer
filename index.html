@@ -5,7 +5,13 @@
 <link rel="stylesheet" href="css/game.css">
 
 <body>
-  <script>
+	<h1>Coins Collected: </h1>
+	<p id='coinCounter'>0</p>
+	<h1>Deaths: </h1>
+	<p id='deathCounter'>0</p>
+
+<button onclick="restartGame()">Start Over</button>
+	<script>
     runGame(GAME_LEVELS, DOMDisplay);
-  </script>
+	</script>
 </body>
